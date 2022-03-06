@@ -7,3 +7,6 @@
 [submodule "lib/timeless"]
 	path = lib/timeless
 	url = https://github.com/timeless-fi/timeless
+[submodule "lib/timeless-amm"]
+	path = lib/timeless-amm
+	url = https://github.com/timeless-fi/timeless-amm
