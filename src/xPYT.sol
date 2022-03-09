@@ -158,7 +158,7 @@ contract xPYT is ERC4626, ReentrancyGuard {
         if (!valid) {
             revert Error_TWAPResultInvalid();
         }
-        if (timeElapsed <= twapMinLookbackTime) {
+        if (timeElapsed < twapMinLookbackTime) {
             revert Error_TWAPTimeElapsedInsufficient();
         }
 
@@ -237,7 +237,7 @@ contract xPYT is ERC4626, ReentrancyGuard {
             uint256 pytPriceInUnderlying,
             uint256 timeElapsed
         ) = ammPool.quote(twapLookbackDistance);
-        if (!valid || timeElapsed <= twapMinLookbackTime) {
+        if (!valid || timeElapsed < twapMinLookbackTime) {
             return (false, 0, 0, 0);
         }
 
