@@ -36,7 +36,13 @@ contract xPYT is ERC4626, ReentrancyGuard {
     /// Events
     /// -----------------------------------------------------------------------
 
-    event Pound();
+    event Pound(
+        address indexed sender,
+        address indexed pounderRewardRecipient,
+        uint256 yieldAmount,
+        uint256 pytCompounded,
+        uint256 pounderReward
+    );
 
     /// -----------------------------------------------------------------------
     /// Constants
@@ -198,7 +204,13 @@ contract xPYT is ERC4626, ReentrancyGuard {
         // transfer pounder reward
         asset.safeTransfer(pounderRewardRecipient, pounderReward);
 
-        emit Pound();
+        emit Pound(
+            msg.sender,
+            pounderRewardRecipient,
+            yieldAmount,
+            pytCompounded,
+            pounderReward
+        );
     }
 
     /// @notice Previews the result of calling pound()
@@ -216,7 +228,7 @@ contract xPYT is ERC4626, ReentrancyGuard {
             uint256 pounderReward
         )
     {
-        // claim yield from gate
+        // get claimable yield amount from gate
         yieldAmount = gate.getClaimableYieldAmount(vault, address(this));
 
         // query the TWAP oracle
@@ -249,7 +261,7 @@ contract xPYT is ERC4626, ReentrancyGuard {
             );
         }
 
-        // swap NYT into PYT
+        // simulate swapping NYT into PYT and check slippage
         ERC20 nytERC20 = ERC20(address(nyt));
         uint256 tokenAmountOut = ammPool.calcOutGivenIn(
             ammPool.getBalance(nytERC20),
@@ -263,7 +275,7 @@ contract xPYT is ERC4626, ReentrancyGuard {
             return (false, 0, 0, 0);
         }
 
-        // record PYT balance increase
+        // compute compounded PYT amount and pounder reward amount
         unchecked {
             // token balance cannot exceed 256 bits since totalSupply is an uint256
             pytCompounded = yieldAmount + tokenAmountOut;
@@ -275,6 +287,7 @@ contract xPYT is ERC4626, ReentrancyGuard {
             pytCompounded -= pounderReward;
         }
 
+        // if execution has reached this point, the simulation was successful
         success = true;
     }
 
