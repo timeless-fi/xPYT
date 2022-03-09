@@ -170,8 +170,8 @@ contract xPYT is ERC4626, ReentrancyGuard {
         }
         uint256 nytPriceInPYT = FullMath.mulDiv(
             nytPriceInUnderlying,
-            pytPriceInUnderlying,
-            BONE
+            BONE,
+            pytPriceInUnderlying
         );
         uint256 minAmountOut = FullMath.mulDiv(
             FullMath.mulDiv(yieldAmount, nytPriceInPYT, BONE),
@@ -251,8 +251,8 @@ contract xPYT is ERC4626, ReentrancyGuard {
             }
             uint256 nytPriceInPYT = FullMath.mulDiv(
                 nytPriceInUnderlying,
-                pytPriceInUnderlying,
-                BONE
+                BONE,
+                pytPriceInUnderlying
             );
             minAmountOut = FullMath.mulDiv(
                 FullMath.mulDiv(yieldAmount, nytPriceInPYT, BONE),
