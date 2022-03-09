@@ -14,6 +14,7 @@ xPYT has the following features:
 ## Architecture
 
 -   [`xPYT.sol`](src/xPYT.sol): Permissionless auto-compounding vault for Timeless perpetual yield tokens
+-   [`xPYTFactory.sol`](src/xPYTFactory.sol): Factory for deploying xPYT contracts
 
 ## Installation
 
