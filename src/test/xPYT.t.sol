@@ -185,4 +185,76 @@ contract xPYTTest is BaseTest {
             "pounderReward incorrect"
         );
     }
+
+    function test_triggerError_TWAPResultInvalid() public {
+        // wait to update TWAP oracle
+        vm.warp(ORACLE_UPDATE_INTERVAL);
+
+        // do swap with pool to update TWAP
+        uint256 swapAmount = AMOUNT / 10;
+        ERC20 pyt = ERC20(
+            address(gate.getPerpetualYieldTokenForVault(address(vault)))
+        );
+        underlying.transfer(address(pool), swapAmount);
+        pool.swapExactAmountIn(underlying, swapAmount, pyt, 0, address(this));
+
+        // mint yield to vault
+        uint256 mintYieldAmount = AMOUNT / 100;
+        underlying.mint(address(vault), mintYieldAmount);
+        gate.getClaimableYieldAmount(address(vault), address(xpyt));
+
+        // preview pound
+        (bool success, , , ) = xpyt.previewPound();
+        assertTrue(!success, "previewPound returned success=true");
+        vm.expectRevert(abi.encodeWithSignature("Error_TWAPResultInvalid()"));
+        xpyt.pound(POUNDER_REWARD_RECIPIENT);
+    }
+
+    function test_triggerError_InvalidMultiplierValue() public {
+        ERC20 pyt = ERC20(
+            address(gate.getPerpetualYieldTokenForVault(address(vault)))
+        );
+        vm.expectRevert(
+            abi.encodeWithSignature("Error_InvalidMultiplierValue()")
+        );
+        xpyt = new xPYT(
+            pyt,
+            "xPYT",
+            "xPYT",
+            pool,
+            10 * BONE,
+            TWAP_LOOKBACK_DISTANCE,
+            TWAP_MIN_LOOKBACK_TIME,
+            10 * BONE
+        );
+    }
+
+    function test_triggerError_TWAPTimeElapsedInsufficient() public {
+        // wait to update TWAP oracle
+        vm.warp(ORACLE_UPDATE_INTERVAL);
+
+        // do swap with pool to update TWAP
+        uint256 swapAmount = AMOUNT / 10;
+        ERC20 pyt = ERC20(
+            address(gate.getPerpetualYieldTokenForVault(address(vault)))
+        );
+        underlying.transfer(address(pool), swapAmount);
+        pool.swapExactAmountIn(underlying, swapAmount, pyt, 0, address(this));
+
+        // wait, but don't exceed the minimum lookback time
+        vm.warp(ORACLE_UPDATE_INTERVAL + TWAP_MIN_LOOKBACK_TIME - 1);
+
+        // mint yield to vault
+        uint256 mintYieldAmount = AMOUNT / 100;
+        underlying.mint(address(vault), mintYieldAmount);
+        gate.getClaimableYieldAmount(address(vault), address(xpyt));
+
+        // preview pound
+        (bool success, , , ) = xpyt.previewPound();
+        assertTrue(!success, "previewPound returned success=true");
+        vm.expectRevert(
+            abi.encodeWithSignature("Error_TWAPTimeElapsedInsufficient()")
+        );
+        xpyt.pound(POUNDER_REWARD_RECIPIENT);
+    }
 }
