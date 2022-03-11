@@ -114,9 +114,9 @@ contract xPYT is ERC4626, ReentrancyGuard {
         if (pounderRewardMultiplier_ > BONE) {
             revert Error_InvalidMultiplierValue();
         }
-        Gate gate_ = PerpetualYieldToken(address(asset)).gate();
+        Gate gate_ = PerpetualYieldToken(address(asset_)).gate();
         gate = gate_;
-        address vault_ = PerpetualYieldToken(address(asset)).vault();
+        address vault_ = PerpetualYieldToken(address(asset_)).vault();
         vault = vault_;
         nyt = gate_.getNegativeYieldTokenForVault(vault_);
     }
@@ -180,6 +180,7 @@ contract xPYT is ERC4626, ReentrancyGuard {
         );
 
         // swap NYT into PYT
+        ERC20(address(nyt)).safeTransfer(address(ammPool), yieldAmount);
         (uint256 tokenAmountOut, ) = ammPool.swapExactAmountIn(
             ERC20(address(nyt)),
             yieldAmount,
