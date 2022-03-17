@@ -143,7 +143,7 @@ contract UniswapV3xPYTTest is
         // NYT: AMOUNT
     }
 
-    function test_basicPound() public {
+    function testBasic_pound() public {
         // wait for valid TWAP result
         vm.warp(TWAP_SECONDS_AGO);
 
@@ -195,7 +195,7 @@ contract UniswapV3xPYTTest is
         );
     }
 
-    function test_triggerError_InvalidMultiplierValue() public {
+    function testTriggerError_InvalidMultiplierValue() public {
         vm.expectRevert(
             abi.encodeWithSignature("Error_InvalidMultiplierValue()")
         );
@@ -212,7 +212,7 @@ contract UniswapV3xPYTTest is
         );
     }
 
-    function test_triggerError_ConsultTwapOracleFailed() public {
+    function testTriggerError_ConsultTwapOracleFailed() public {
         // mint yield to vault
         uint256 mintYieldAmount = AMOUNT / 100;
         underlying.mint(address(vault), mintYieldAmount);
