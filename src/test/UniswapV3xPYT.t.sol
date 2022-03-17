@@ -106,7 +106,7 @@ contract UniswapV3xPYTTest is
         uniswapV3Pool.initialize(TickMath.getSqrtRatioAtTick(0));
 
         // mint underlying
-        underlying.mint(address(this), 4 * AMOUNT);
+        underlying.mint(address(this), 3 * AMOUNT);
 
         // mint xPYT & NYT
         underlying.approve(address(gate), type(uint256).max);
@@ -116,15 +116,6 @@ contract UniswapV3xPYTTest is
             vault,
             xpyt,
             2 * AMOUNT
-        );
-
-        // give some yield to xPYT
-        gate.enterWithUnderlying(
-            address(this),
-            address(xpyt),
-            vault,
-            ERC4626(address(0)),
-            AMOUNT
         );
 
         // add liquidity
@@ -149,17 +140,16 @@ contract UniswapV3xPYTTest is
         // token balances:
         // underlying: AMOUNT
         // xPYT: AMOUNT
-        // NYT: 2 * AMOUNT
+        // NYT: AMOUNT
     }
 
     function test_basicPound() public {
-        // wait to update TWAP oracle
+        // wait for valid TWAP result
         vm.warp(TWAP_SECONDS_AGO);
 
         // mint yield to vault
         uint256 mintYieldAmount = AMOUNT / 100;
         underlying.mint(address(vault), mintYieldAmount);
-        gate.getClaimableYieldAmount(address(vault), address(xpyt));
 
         // pound
         (
@@ -181,7 +171,7 @@ contract UniswapV3xPYTTest is
         );
         assertEqDecimal(
             claimedYieldAmount,
-            ((mintYieldAmount / 2) * (1000 - PROTOCOL_FEE)) / 1000,
+            (mintYieldAmount * (1000 - PROTOCOL_FEE)) / 1000,
             DECIMALS,
             "claimedYieldAmount incorrect"
         );
@@ -205,77 +195,41 @@ contract UniswapV3xPYTTest is
         );
     }
 
-    /*function test_triggerError_TWAPResultInvalid() public {
-        // wait to update TWAP oracle
-        vm.warp(ORACLE_UPDATE_INTERVAL);
-
-        // do swap with pool to update TWAP
-        uint256 swapAmount = AMOUNT / 10;
-        ERC20 pyt = ERC20(
-            address(gate.getPerpetualYieldTokenForVault(address(vault)))
-        );
-        underlying.transfer(address(pool), swapAmount);
-        pool.swapExactAmountIn(underlying, swapAmount, pyt, 0, address(this));
-
-        // mint yield to vault
-        uint256 mintYieldAmount = AMOUNT / 100;
-        underlying.mint(address(vault), mintYieldAmount);
-        gate.getClaimableYieldAmount(address(vault), address(xpyt));
-
-        // preview pound
-        (bool success, , , ) = xpyt.previewPound();
-        assertTrue(!success, "previewPound returned success=true");
-        vm.expectRevert(abi.encodeWithSignature("Error_TWAPResultInvalid()"));
-        xpyt.pound(POUNDER_REWARD_RECIPIENT);
-    }
-
     function test_triggerError_InvalidMultiplierValue() public {
-        ERC20 pyt = ERC20(
-            address(gate.getPerpetualYieldTokenForVault(address(vault)))
-        );
         vm.expectRevert(
             abi.encodeWithSignature("Error_InvalidMultiplierValue()")
         );
-        xpyt = new xPYT(
-            pyt,
+        xpyt = new UniswapV3xPYT(
+            ERC20(address(pyt)),
             "xPYT",
             "xPYT",
-            pool,
             10 * ONE,
-            TWAP_LOOKBACK_DISTANCE,
-            TWAP_MIN_LOOKBACK_TIME,
-            10 * ONE
+            10 * ONE,
+            address(uniswapV3Factory),
+            uniswapV3Quoter,
+            UNI_FEE,
+            TWAP_SECONDS_AGO
         );
     }
 
-    function test_triggerError_TWAPTimeElapsedInsufficient() public {
-        // wait to update TWAP oracle
-        vm.warp(ORACLE_UPDATE_INTERVAL);
-
-        // do swap with pool to update TWAP
-        uint256 swapAmount = AMOUNT / 10;
-        ERC20 pyt = ERC20(
-            address(gate.getPerpetualYieldTokenForVault(address(vault)))
-        );
-        underlying.transfer(address(pool), swapAmount);
-        pool.swapExactAmountIn(underlying, swapAmount, pyt, 0, address(this));
-
-        // wait, but don't exceed the minimum lookback time
-        vm.warp(ORACLE_UPDATE_INTERVAL + TWAP_MIN_LOOKBACK_TIME - 1);
-
+    function test_triggerError_ConsultTwapOracleFailed() public {
         // mint yield to vault
         uint256 mintYieldAmount = AMOUNT / 100;
         underlying.mint(address(vault), mintYieldAmount);
-        gate.getClaimableYieldAmount(address(vault), address(xpyt));
 
         // preview pound
-        (bool success, , , ) = xpyt.previewPound();
-        assertTrue(!success, "previewPound returned success=true");
+        (xPYT.PreviewPoundErrorCode errorCode, , , ) = xpyt.previewPound();
+        assertTrue(
+            errorCode == xPYT.PreviewPoundErrorCode.TWAP_FAIL,
+            "previewPound didn't return TWAP_FAIL"
+        );
+
+        // try pound and expect revert
         vm.expectRevert(
-            abi.encodeWithSignature("Error_TWAPTimeElapsedInsufficient()")
+            abi.encodeWithSignature("Error_ConsultTwapOracleFailed()")
         );
         xpyt.pound(POUNDER_REWARD_RECIPIENT);
-    }*/
+    }
 
     /// -----------------------------------------------------------------------
     /// Uniswap V3 add liquidity support
