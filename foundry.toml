@@ -1,7 +1,18 @@
 [default]
 ffi = false
 fuzz_runs = 256
+gas_reports = ["UniswapV3xPYT"]
 optimizer = true
 optimizer_runs = 1000000
-remappings = ["ds-test/=lib/ds-test/src/", "solmate/=lib/solmate/src/"]
+remappings = [
+  "ds-test/=lib/ds-test/src/",
+  "solmate/=lib/solmate/src/",
+  "timeless/=lib/timeless/src/",
+  "v3-core/=lib/v3-core/contracts/",
+  "v3-periphery/=lib/v3-periphery/contracts/",
+]
 verbosity = 1
+
+# Extreme Fuzzing CI Profile :P
+[ci]
+fuzz_runs = 100_000
