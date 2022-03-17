@@ -9,7 +9,7 @@ xPYT has the following features:
 
 -   **Permissionless deployment**: Anyone can use the `xPYTFactory` contract to deploy xPYT vaults.
 -   **Permissionless auto-compounding**: Rather than relying on centralized strategists/harvesters to perform the auto-compounding, xPYT makes the auto-compounding executable by anyone, and the caller would receive a portion of the claimed yield as reward. This means xPYT vaults can rely on MEV bots to perform the auto-compounding, rather than having to build out centralized infrastructure.
--   **Minimal sandwiching losses**: xPYT uses the TWAP oracle offered by Timeless AMM to make sure that when it auto-compounds yield into PYT the price it gets doesn't deviate too much from the TWAP, minimizing losses from sandwiching attacks.
+-   **Minimal sandwiching losses**: xPYT uses a TWAP oracle to make sure that when it auto-compounds yield into PYT the price it gets doesn't deviate too much from the TWAP, minimizing losses from sandwiching attacks.
 
 ## Architecture
 
@@ -37,7 +37,7 @@ This project uses [Foundry](https://github.com/gakonst/foundry) as the developme
 ### Dependencies
 
 ```
-make update
+make install
 ```
 
 ### Compilation

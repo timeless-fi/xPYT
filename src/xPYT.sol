@@ -11,13 +11,10 @@ import {FullMath} from "timeless/lib/FullMath.sol";
 import {NegativeYieldToken} from "timeless/NegativeYieldToken.sol";
 import {PerpetualYieldToken} from "timeless/PerpetualYieldToken.sol";
 
-import {TLPool} from "timeless-amm/TLPool.sol";
-
 /// @title xPYT
 /// @author zefram.eth
 /// @notice Permissionless auto-compounding vault for Timeless perpetual yield tokens
-/// @dev Uses Timeless AMM to convert the NYT yield into PYT
-contract xPYT is ERC4626, ReentrancyGuard {
+abstract contract xPYT is ERC4626, ReentrancyGuard {
     /// -----------------------------------------------------------------------
     /// Library usage
     /// -----------------------------------------------------------------------
@@ -28,9 +25,9 @@ contract xPYT is ERC4626, ReentrancyGuard {
     /// Errors
     /// -----------------------------------------------------------------------
 
-    error Error_TWAPResultInvalid();
+    error Error_InsufficientOutput();
     error Error_InvalidMultiplierValue();
-    error Error_TWAPTimeElapsedInsufficient();
+    error Error_ConsultTwapOracleFailed();
 
     /// -----------------------------------------------------------------------
     /// Events
@@ -43,6 +40,16 @@ contract xPYT is ERC4626, ReentrancyGuard {
         uint256 pytCompounded,
         uint256 pounderReward
     );
+
+    /// -----------------------------------------------------------------------
+    /// Enums
+    /// -----------------------------------------------------------------------
+
+    enum PreviewPoundErrorCode {
+        OK,
+        TWAP_FAIL,
+        INSUFFICIENT_OUTPUT
+    }
 
     /// -----------------------------------------------------------------------
     /// Constants
@@ -61,17 +68,8 @@ contract xPYT is ERC4626, ReentrancyGuard {
     /// @notice The vault associated with the PYT.
     address public immutable vault;
 
-    /// @notice The TLPool contract used for selling NYT into PYT.
-    TLPool public immutable ammPool;
-
     /// @notice The NYT associated with the PYT.
     NegativeYieldToken public immutable nyt;
-
-    /// @notice The lookbackDistance value input to TLPool::quote().
-    uint16 public immutable twapLookbackDistance;
-
-    /// @notice The minimum acceptable timeElapsed value output by TLPool::quote().
-    uint256 public immutable twapMinLookbackTime;
 
     /// @notice The minimum acceptable ratio between the NYT output in pound() and the expected NYT output
     /// based on the TWAP. Scaled by BONE.
@@ -97,15 +95,9 @@ contract xPYT is ERC4626, ReentrancyGuard {
         ERC20 asset_,
         string memory name_,
         string memory symbol_,
-        TLPool ammPool_,
         uint256 pounderRewardMultiplier_,
-        uint16 twapLookbackDistance_,
-        uint256 twapMinLookbackTime_,
         uint256 minOutputMultiplier_
     ) ERC4626(asset_, name_, symbol_) {
-        ammPool = ammPool_;
-        twapLookbackDistance = twapLookbackDistance_;
-        twapMinLookbackTime = twapMinLookbackTime_;
         if (minOutputMultiplier_ > BONE) {
             revert Error_InvalidMultiplierValue();
         }
@@ -129,8 +121,8 @@ contract xPYT is ERC4626, ReentrancyGuard {
     /// @dev Part of the claimed yield is given to the caller as reward, which incentivizes MEV bots
     /// to perform the auto-compounding for us.
     /// @param pounderRewardRecipient The address that will receive the caller reward
-    /// @return yieldAmount The amount of yield claimed, in terms of the PYT's underlying asset
-    /// @return pytCompounded The amount of PYT added to totalAssets
+    /// @return yieldAmount The amount of PYT & NYT claimed as yield
+    /// @return pytCompounded The amount of PYT distributed to xPYT holders
     /// @return pounderReward The amount of caller reward given, in PYT
     function pound(address pounderRewardRecipient)
         external
@@ -145,61 +137,45 @@ contract xPYT is ERC4626, ReentrancyGuard {
         // claim yield from gate
         yieldAmount = gate.claimYieldAndEnter(
             address(this),
+            address(this),
             vault,
             ERC4626(address(0))
         );
 
-        // query the TWAP oracle
-        (
-            bool valid,
-            uint256 pytPriceInUnderlying,
-            uint256 timeElapsed
-        ) = ammPool.quote(twapLookbackDistance);
-        if (!valid) {
-            revert Error_TWAPResultInvalid();
+        // compute minXpytAmountOut based on the TWAP & minOutputMultiplier
+        (bool success, uint256 twapQuoteAmountOut) = _getTwapQuote(yieldAmount);
+        if (!success) {
+            revert Error_ConsultTwapOracleFailed();
         }
-        if (timeElapsed < twapMinLookbackTime) {
-            revert Error_TWAPTimeElapsedInsufficient();
-        }
-
-        // compute minAmountOut based on the TWAP & minOutputMultiplier
-        uint256 nytPriceInUnderlying;
-        unchecked {
-            // the price of PYT/NYT never exceeds 1
-            nytPriceInUnderlying = BONE - pytPriceInUnderlying;
-        }
-        uint256 nytPriceInPYT = FullMath.mulDiv(
-            nytPriceInUnderlying,
-            BONE,
-            pytPriceInUnderlying
-        );
-        uint256 minAmountOut = FullMath.mulDiv(
-            FullMath.mulDiv(yieldAmount, nytPriceInPYT, BONE),
+        uint256 minXpytAmountOut = FullMath.mulDiv(
+            twapQuoteAmountOut,
             minOutputMultiplier,
             BONE
         );
 
-        // swap NYT into PYT
-        ERC20(address(nyt)).safeTransfer(address(ammPool), yieldAmount);
-        (uint256 tokenAmountOut, ) = ammPool.swapExactAmountIn(
-            ERC20(address(nyt)),
-            yieldAmount,
-            asset,
-            minAmountOut,
-            address(this)
-        );
+        // swap NYT into xPYT
+        uint256 xPytAmountOut = _swap(yieldAmount);
+        if (xPytAmountOut < minXpytAmountOut) {
+            revert Error_InsufficientOutput();
+        }
+
+        // burn the xPYT
+        uint256 pytAmountRedeemed = convertToAssets(xPytAmountOut);
+        _burn(address(this), xPytAmountOut);
 
         // record PYT balance increase
         unchecked {
             // token balance cannot exceed 256 bits since totalSupply is an uint256
-            pytCompounded = yieldAmount + tokenAmountOut;
+            pytCompounded = yieldAmount + pytAmountRedeemed;
             pounderReward = FullMath.mulDiv(
                 pytCompounded,
                 pounderRewardMultiplier,
                 BONE
             );
             pytCompounded -= pounderReward;
-            assetBalance += pytCompounded;
+            // don't add pytAmountRedeemed to assetBalance since it's already in the vault,
+            // we just burnt the corresponding xPYT
+            assetBalance += yieldAmount;
         }
 
         // transfer pounder reward
@@ -215,15 +191,14 @@ contract xPYT is ERC4626, ReentrancyGuard {
     }
 
     /// @notice Previews the result of calling pound()
-    /// @return success True if pound() won't revert, false otherwise
-    /// @return yieldAmount The amount of yield claimed, in terms of the PYT's underlying asset
-    /// @return pytCompounded The amount of PYT added to totalAssets
+    /// @return errorCode The end state of pound()
+    /// @return yieldAmount The amount of PYT & NYT claimed as yield
+    /// @return pytCompounded The amount of PYT distributed to xPYT holders
     /// @return pounderReward The amount of caller reward given, in PYT
     function previewPound()
         external
-        view
         returns (
-            bool success,
+            PreviewPoundErrorCode errorCode,
             uint256 yieldAmount,
             uint256 pytCompounded,
             uint256 pounderReward
@@ -232,64 +207,44 @@ contract xPYT is ERC4626, ReentrancyGuard {
         // get claimable yield amount from gate
         yieldAmount = gate.getClaimableYieldAmount(vault, address(this));
 
-        // query the TWAP oracle
-        (
-            bool valid,
-            uint256 pytPriceInUnderlying,
-            uint256 timeElapsed
-        ) = ammPool.quote(twapLookbackDistance);
-        if (!valid || timeElapsed < twapMinLookbackTime) {
-            return (false, 0, 0, 0);
-        }
-
-        // compute minAmountOut based on the TWAP & minOutputMultiplier
-        uint256 minAmountOut;
-        {
-            uint256 nytPriceInUnderlying;
-            unchecked {
-                // the price of PYT/NYT never exceeds 1
-                nytPriceInUnderlying = BONE - pytPriceInUnderlying;
-            }
-            uint256 nytPriceInPYT = FullMath.mulDiv(
-                nytPriceInUnderlying,
-                BONE,
-                pytPriceInUnderlying
-            );
-            minAmountOut = FullMath.mulDiv(
-                FullMath.mulDiv(yieldAmount, nytPriceInPYT, BONE),
-                minOutputMultiplier,
-                BONE
-            );
-        }
-
-        // simulate swapping NYT into PYT and check slippage
-        ERC20 nytERC20 = ERC20(address(nyt));
-        uint256 tokenAmountOut = ammPool.calcOutGivenIn(
-            ammPool.getBalance(nytERC20),
-            ammPool.getDenormalizedWeight(nytERC20),
-            ammPool.getBalance(asset),
-            ammPool.getDenormalizedWeight(asset),
-            yieldAmount,
-            ammPool.swapFee()
+        // compute minXpytAmountOut based on the TWAP & minOutputMultiplier
+        (bool twapSuccess, uint256 twapQuoteAmountOut) = _getTwapQuote(
+            yieldAmount
         );
-        if (tokenAmountOut < minAmountOut) {
-            return (false, 0, 0, 0);
+        if (!twapSuccess) {
+            return (PreviewPoundErrorCode.TWAP_FAIL, 0, 0, 0);
         }
+        uint256 minXpytAmountOut = FullMath.mulDiv(
+            twapQuoteAmountOut,
+            minOutputMultiplier,
+            BONE
+        );
+
+        // simulate swapping NYT into PYT
+        uint256 xPytAmountOut = _quote(yieldAmount);
+        if (xPytAmountOut < minXpytAmountOut) {
+            return (PreviewPoundErrorCode.INSUFFICIENT_OUTPUT, 0, 0, 0);
+        }
+
+        // burn the xPYT
+        uint256 pytAmountRedeemed = convertToAssets(xPytAmountOut);
 
         // compute compounded PYT amount and pounder reward amount
         unchecked {
             // token balance cannot exceed 256 bits since totalSupply is an uint256
-            pytCompounded = yieldAmount + tokenAmountOut;
+            pytCompounded = yieldAmount + pytAmountRedeemed;
             pounderReward = FullMath.mulDiv(
                 pytCompounded,
                 pounderRewardMultiplier,
                 BONE
             );
+            // don't add pytAmountRedeemed to assetBalance since it's already in the vault,
+            // we just burnt the corresponding xPYT
             pytCompounded -= pounderReward;
         }
 
         // if execution has reached this point, the simulation was successful
-        success = true;
+        errorCode = PreviewPoundErrorCode.OK;
     }
 
     /// -----------------------------------------------------------------------
@@ -315,4 +270,35 @@ contract xPYT is ERC4626, ReentrancyGuard {
     ) internal virtual override {
         assetBalance += assets;
     }
+
+    /// -----------------------------------------------------------------------
+    /// Internal utilities
+    /// -----------------------------------------------------------------------
+
+    /// @dev Consults the TWAP oracle to get a quote for how much xPYT will be received from swapping
+    /// `nytAmountIn` NYT.
+    /// @param nytAmountIn The amount of NYT to swap
+    /// @return success True if the call to the TWAP oracle was successful, false otherwise
+    /// @return xPytAmountOut The amount of xPYT that will be received from the swap
+    function _getTwapQuote(uint256 nytAmountIn)
+        internal
+        view
+        virtual
+        returns (bool success, uint256 xPytAmountOut);
+
+    /// @dev Swaps `nytAmountIn` NYT into xPYT using the underlying DEX
+    /// @param nytAmountIn The amount of NYT to swap
+    /// @return xPytAmountOut The amount of xPYT received from the swap
+    function _swap(uint256 nytAmountIn)
+        internal
+        virtual
+        returns (uint256 xPytAmountOut);
+
+    /// @dev Gets a quote from the underlying DEX for swapping `nytAmountIn` NYT into xPYT
+    /// @param nytAmountIn The amount of NYT to swap
+    /// @return xPytAmountOut The amount of xPYT that will be received from the swap
+    function _quote(uint256 nytAmountIn)
+        internal
+        virtual
+        returns (uint256 xPytAmountOut);
 }

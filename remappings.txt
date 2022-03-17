@@ -1,6 +1,5 @@
 solmate/=lib/solmate/src/
 ds-test/=lib/ds-test/src/
 timeless/=lib/timeless/src/
-clones/=lib/timeless-amm/lib/clones-with-immutable-args/src/
-timeless-amm/=lib/timeless-amm/src/
-weird-erc20/=lib/solmate/lib/weird-erc20/src/
+v3-core/=lib/v3-core/contracts/
+v3-periphery/=lib/v3-periphery/contracts/
