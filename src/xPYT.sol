@@ -56,7 +56,7 @@ abstract contract xPYT is ERC4626, ReentrancyGuard {
     /// -----------------------------------------------------------------------
 
     /// @notice The base unit for fixed point decimals.
-    uint256 internal constant BONE = 10**18;
+    uint256 internal constant ONE = 10**18;
 
     /// -----------------------------------------------------------------------
     /// Immutable parameters
@@ -72,10 +72,10 @@ abstract contract xPYT is ERC4626, ReentrancyGuard {
     NegativeYieldToken public immutable nyt;
 
     /// @notice The minimum acceptable ratio between the NYT output in pound() and the expected NYT output
-    /// based on the TWAP. Scaled by BONE.
+    /// based on the TWAP. Scaled by ONE.
     uint256 public immutable minOutputMultiplier;
 
-    /// @notice The proportion of the yield claimed in pound() to give to the caller as reward. Scaled by BONE.
+    /// @notice The proportion of the yield claimed in pound() to give to the caller as reward. Scaled by ONE.
     uint256 public immutable pounderRewardMultiplier;
 
     /// -----------------------------------------------------------------------
@@ -98,12 +98,12 @@ abstract contract xPYT is ERC4626, ReentrancyGuard {
         uint256 pounderRewardMultiplier_,
         uint256 minOutputMultiplier_
     ) ERC4626(asset_, name_, symbol_) {
-        if (minOutputMultiplier_ > BONE) {
+        if (minOutputMultiplier_ > ONE) {
             revert Error_InvalidMultiplierValue();
         }
         minOutputMultiplier = minOutputMultiplier_;
         pounderRewardMultiplier = pounderRewardMultiplier_;
-        if (pounderRewardMultiplier_ > BONE) {
+        if (pounderRewardMultiplier_ > ONE) {
             revert Error_InvalidMultiplierValue();
         }
         Gate gate_ = PerpetualYieldToken(address(asset_)).gate();
@@ -150,7 +150,7 @@ abstract contract xPYT is ERC4626, ReentrancyGuard {
         uint256 minXpytAmountOut = FullMath.mulDiv(
             twapQuoteAmountOut,
             minOutputMultiplier,
-            BONE
+            ONE
         );
 
         // swap NYT into xPYT
@@ -170,7 +170,7 @@ abstract contract xPYT is ERC4626, ReentrancyGuard {
             pounderReward = FullMath.mulDiv(
                 pytCompounded,
                 pounderRewardMultiplier,
-                BONE
+                ONE
             );
             pytCompounded -= pounderReward;
             // don't add pytAmountRedeemed to assetBalance since it's already in the vault,
@@ -217,7 +217,7 @@ abstract contract xPYT is ERC4626, ReentrancyGuard {
         uint256 minXpytAmountOut = FullMath.mulDiv(
             twapQuoteAmountOut,
             minOutputMultiplier,
-            BONE
+            ONE
         );
 
         // simulate swapping NYT into PYT
@@ -236,7 +236,7 @@ abstract contract xPYT is ERC4626, ReentrancyGuard {
             pounderReward = FullMath.mulDiv(
                 pytCompounded,
                 pounderRewardMultiplier,
-                BONE
+                ONE
             );
             // don't add pytAmountRedeemed to assetBalance since it's already in the vault,
             // we just burnt the corresponding xPYT

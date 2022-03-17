@@ -160,26 +160,27 @@ contract UniswapV3xPYT is xPYT, IUniswapV3SwapCallback {
             )
         );
 
-        // get mean tick from TWAP oracle
-        // the call may fail if the Uniswap V3 pool has no observation from before
-        // (block.timestamp - uniswapV3TwapSecondsAgo), so we wrap it in a try-catch
-        // and bubble up the failure if it occurs
-        try OracleLibrary.consult(uniPool, uniswapV3TwapSecondsAgo) returns (
-            int24 arithmeticMeanTick,
-            uint128 harmonicMeanLiquidity
-        ) {
-            // convert mean tick to quote
-            success = true;
-            xPytAmountOut = OracleLibrary.getQuoteAtTick(
-                arithmeticMeanTick,
-                nytAmountIn,
-                address(nyt),
-                address(this)
-            );
-        } catch {
-            // oracle call failed, bubble up failure
+        // ensure oldest observation is at or before (block.timestamp - uniswapV3TwapSecondsAgo)
+        uint32 oldestObservationSecondsAgo = OracleLibrary
+            .getOldestObservationSecondsAgo(uniPool);
+        if (oldestObservationSecondsAgo < uniswapV3TwapSecondsAgo) {
             return (false, 0);
         }
+
+        // get mean tick from TWAP oracle
+        (int24 arithmeticMeanTick, ) = OracleLibrary.consult(
+            uniPool,
+            uniswapV3TwapSecondsAgo
+        );
+
+        // convert mean tick to quote
+        success = true;
+        xPytAmountOut = OracleLibrary.getQuoteAtTick(
+            arithmeticMeanTick,
+            uint128(nytAmountIn),
+            address(nyt),
+            address(this)
+        );
     }
 
     /// @inheritdoc xPYT
