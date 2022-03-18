@@ -13,6 +13,9 @@ import {xPYT} from "../xPYT.sol";
 import {PoolAddress} from "./lib/PoolAddress.sol";
 import {OracleLibrary} from "./lib/OracleLibrary.sol";
 
+/// @title UniswapV3xPYT
+/// @author zefram.eth
+/// @notice xPYT implementation using Uniswap V3 to swap NYT into PYT
 contract UniswapV3xPYT is xPYT, IUniswapV3SwapCallback {
     /// -----------------------------------------------------------------------
     /// Library usage
