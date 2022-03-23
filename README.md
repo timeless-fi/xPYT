@@ -17,7 +17,7 @@ xPYT has the following features:
 -   [`xPYTFactory.sol`](src/xPYTFactory.sol): Factory for deploying xPYT contracts
 -   [`uniswap-v3/`](src/uniswap-v3/): Uniswap V3 support
     -   [`UniswapV3xPYT.sol`](src/uniswap-v3/UniswapV3xPYT.sol): xPYT implementation using Uniswap V3 to swap NYT into PYT
-    -   [`uniswap-v3/lib/`](src/uniswap-v3/lib/): Libraries used
+    -   [`lib/`](src/uniswap-v3/lib/): Libraries used
         -   [`PoolAddress.sol`](src/uniswap-v3/lib/PoolAddress.sol): Provides functions for deriving a Uniswap V3 pool address from the factory, tokens, and the fee
         -   [`OracleLibrary.sol`](src/uniswap-v3/lib/OracleLibrary.sol): Provides functions to integrate with V3 pool oracle
         -   [`TickMath.sol`](src/uniswap-v3/lib/TickMath.sol): Math library for computing sqrt prices from ticks and vice versa
