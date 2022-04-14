@@ -14,14 +14,20 @@ import {UniswapV3xPYT} from "./uniswap-v3/UniswapV3xPYT.sol";
 contract xPYTFactory {
     event DeployXPYT(ERC20 indexed asset_, xPYT deployed);
 
+    address public immutable uniswapV3Factory;
+    IQuoter public immutable uniswapV3Quoter;
+
+    constructor(address uniswapV3Factory_, IQuoter uniswapV3Quoter_) {
+        uniswapV3Factory = uniswapV3Factory_;
+        uniswapV3Quoter = uniswapV3Quoter_;
+    }
+
     function deployUniswapV3xPYT(
         ERC20 asset_,
         string memory name_,
         string memory symbol_,
         uint256 pounderRewardMultiplier_,
         uint256 minOutputMultiplier_,
-        address uniswapV3Factory_,
-        IQuoter uniswapV3Quoter_,
         uint24 uniswapV3PoolFee_,
         uint32 uniswapV3TwapSecondsAgo_
     ) external returns (xPYT deployed) {
@@ -31,8 +37,8 @@ contract xPYTFactory {
             symbol_,
             pounderRewardMultiplier_,
             minOutputMultiplier_,
-            uniswapV3Factory_,
-            uniswapV3Quoter_,
+            uniswapV3Factory,
+            uniswapV3Quoter,
             uniswapV3PoolFee_,
             uniswapV3TwapSecondsAgo_
         );
