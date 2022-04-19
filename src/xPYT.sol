@@ -248,6 +248,26 @@ abstract contract xPYT is ERC4626, ReentrancyGuard {
     }
 
     /// -----------------------------------------------------------------------
+    /// Sweeping
+    /// -----------------------------------------------------------------------
+
+    /// @notice Uses the extra asset balance of the xPYT contract to mint shares
+    /// @param receiver The recipient of the minted shares
+    /// @return shares The amount of shares minted
+    function sweep(address receiver) public virtual returns (uint256 shares) {
+        uint256 assets = asset.balanceOf(address(this)) - assetBalance;
+
+        // Check for rounding error since we round down in previewDeposit.
+        require((shares = previewDeposit(assets)) != 0, "ZERO_SHARES");
+
+        _mint(receiver, shares);
+
+        emit Deposit(msg.sender, receiver, assets, shares);
+
+        afterDeposit(assets, shares);
+    }
+
+    /// -----------------------------------------------------------------------
     /// ERC4626 overrides
     /// -----------------------------------------------------------------------
 

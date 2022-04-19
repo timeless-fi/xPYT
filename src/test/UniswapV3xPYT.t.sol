@@ -41,6 +41,7 @@ contract UniswapV3xPYTTest is
     uint32 internal constant TWAP_SECONDS_AGO = 1 days;
     uint256 internal constant POUNDER_REWARD_MULTIPLIER = ONE / 10;
     uint256 internal constant MIN_OUTPUT_MULTIPLIER = (9 * ONE) / 10;
+    address internal constant SWEEP_RECIPIENT = address(0x1111);
     address internal constant PROTOCOL_FEE_RECIPIENT = address(0x69);
     address internal constant POUNDER_REWARD_RECIPIENT = address(0x4200);
     ERC4626 internal constant XPYT_NULL = ERC4626(address(0));
@@ -192,6 +193,24 @@ contract UniswapV3xPYTTest is
             expectedPounderReward,
             DECIMALS,
             "pounderReward incorrect"
+        );
+    }
+
+    function testBasic_sweep() public {
+        // unwrap xPYT into PYT and send to the xPYT contract
+        uint256 assets = xpyt.redeem(AMOUNT, address(this), address(this));
+        pyt.transfer(address(xpyt), assets);
+
+        // sweep
+        uint256 expectedShares = xpyt.previewDeposit(assets);
+        xpyt.sweep(SWEEP_RECIPIENT);
+
+        // check shares balance
+        assertEqDecimal(
+            xpyt.balanceOf(SWEEP_RECIPIENT),
+            expectedShares,
+            DECIMALS,
+            "shares minted incorrect"
         );
     }
 
