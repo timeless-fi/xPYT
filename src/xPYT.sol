@@ -254,7 +254,7 @@ abstract contract xPYT is ERC4626, ReentrancyGuard {
     /// @notice Uses the extra asset balance of the xPYT contract to mint shares
     /// @param receiver The recipient of the minted shares
     /// @return shares The amount of shares minted
-    function sweep(address receiver) public virtual returns (uint256 shares) {
+    function sweep(address receiver) external virtual returns (uint256 shares) {
         uint256 assets = asset.balanceOf(address(this)) - assetBalance;
 
         // Check for rounding error since we round down in previewDeposit.
