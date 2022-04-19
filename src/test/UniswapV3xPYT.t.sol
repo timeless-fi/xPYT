@@ -6,6 +6,7 @@ import {ERC4626} from "solmate/mixins/ERC4626.sol";
 
 import {Gate} from "timeless/Gate.sol";
 import {Factory} from "timeless/Factory.sol";
+import {IxPYT} from "timeless/external/IxPYT.sol";
 import {YearnGate} from "timeless/gates/YearnGate.sol";
 import {TestERC20} from "timeless/test/mocks/TestERC20.sol";
 import {NegativeYieldToken} from "timeless/NegativeYieldToken.sol";
@@ -115,7 +116,7 @@ contract UniswapV3xPYTTest is
             address(this),
             address(this),
             vault,
-            xpyt,
+            IxPYT(address(xpyt)),
             2 * AMOUNT
         );
 
@@ -150,7 +151,7 @@ contract UniswapV3xPYTTest is
 
         // mint yield to vault
         uint256 mintYieldAmount = AMOUNT / 100;
-        underlying.mint(address(vault), mintYieldAmount);
+        underlying.mint(vault, mintYieldAmount);
 
         // pound
         (

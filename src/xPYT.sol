@@ -7,6 +7,7 @@ import {ReentrancyGuard} from "solmate/utils/ReentrancyGuard.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 
 import {Gate} from "timeless/Gate.sol";
+import {IxPYT} from "timeless/external/IxPYT.sol";
 import {FullMath} from "timeless/lib/FullMath.sol";
 import {NegativeYieldToken} from "timeless/NegativeYieldToken.sol";
 import {PerpetualYieldToken} from "timeless/PerpetualYieldToken.sol";
@@ -139,7 +140,7 @@ abstract contract xPYT is ERC4626, ReentrancyGuard {
             address(this),
             address(this),
             vault,
-            ERC4626(address(0))
+            IxPYT(address(0))
         );
 
         // compute minXpytAmountOut based on the TWAP & minOutputMultiplier
