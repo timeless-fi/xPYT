@@ -9,5 +9,5 @@ export RPC_URL=$RPC_URL_RINKEBY
 . $(dirname $0)/common.sh
 
 # deploy contracts
-factory_address=$(deploy xPYTFactory $UNIV3_FACTORY_RINKEBY $UNIV3_QUOTER_RINKEBY)
+factory_address=$(deploy xPYTFactory $UNIV3_FACTORY $UNIV3_QUOTER)
 echo "xPYTFactory=$factory_address"

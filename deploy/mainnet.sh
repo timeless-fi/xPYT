@@ -9,5 +9,5 @@ export RPC_URL=$RPC_URL_MAINNET
 . $(dirname $0)/common.sh
 
 # deploy contracts
-factory_address=$(deploy xPYTFactory $UNIV3_FACTORY_MAINNET $UNIV3_QUOTER_MAINNET)
+factory_address=$(deploy xPYTFactory $UNIV3_FACTORY $UNIV3_QUOTER)
 echo "xPYTFactory=$factory_address"
