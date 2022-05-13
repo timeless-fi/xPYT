@@ -176,7 +176,7 @@ abstract contract xPYT is ERC4626, ReentrancyGuard {
             pytCompounded -= pounderReward;
             // don't add pytAmountRedeemed to assetBalance since it's already in the vault,
             // we just burnt the corresponding xPYT
-            assetBalance += yieldAmount;
+            assetBalance = assetBalance + yieldAmount - pounderReward;
         }
 
         // transfer pounder reward
