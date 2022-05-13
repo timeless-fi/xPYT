@@ -147,7 +147,7 @@ contract UniswapV3xPYTTest is
 
     function testBasic_pound() public {
         // wait for valid TWAP result
-        vm.warp(TWAP_SECONDS_AGO);
+        vm.warp(TWAP_SECONDS_AGO + 1);
 
         // mint yield to vault
         uint256 mintYieldAmount = AMOUNT / 100;
@@ -194,6 +194,12 @@ contract UniswapV3xPYTTest is
             expectedPounderReward,
             DECIMALS,
             "pounderReward incorrect"
+        );
+        assertEqDecimal(
+            pyt.balanceOf(address(xpyt)),
+            xpyt.assetBalance(),
+            DECIMALS,
+            "xPYT's PYT balance incorrect after pound"
         );
     }
 
