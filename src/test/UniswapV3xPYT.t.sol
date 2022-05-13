@@ -61,7 +61,6 @@ contract UniswapV3xPYTTest is
     function setUp() public {
         // deploy factory
         factory = new Factory(
-            address(this),
             Factory.ProtocolFeeInfo({
                 fee: uint8(PROTOCOL_FEE),
                 recipient: PROTOCOL_FEE_RECIPIENT
