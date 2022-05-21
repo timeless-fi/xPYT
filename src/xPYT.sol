@@ -9,13 +9,15 @@ import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {Gate} from "timeless/Gate.sol";
 import {IxPYT} from "timeless/external/IxPYT.sol";
 import {FullMath} from "timeless/lib/FullMath.sol";
+import {Multicall} from "timeless/lib/Multicall.sol";
+import {SelfPermit} from "timeless/lib/SelfPermit.sol";
 import {NegativeYieldToken} from "timeless/NegativeYieldToken.sol";
 import {PerpetualYieldToken} from "timeless/PerpetualYieldToken.sol";
 
 /// @title xPYT
 /// @author zefram.eth
 /// @notice Permissionless auto-compounding vault for Timeless perpetual yield tokens
-abstract contract xPYT is ERC4626, ReentrancyGuard {
+abstract contract xPYT is ERC4626, ReentrancyGuard, Multicall, SelfPermit {
     /// -----------------------------------------------------------------------
     /// Library usage
     /// -----------------------------------------------------------------------
