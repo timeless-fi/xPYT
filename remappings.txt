@@ -1,5 +1,6 @@
 solmate/=lib/solmate/src/
-ds-test/=lib/ds-test/src/
 timeless/=lib/timeless/src/
 v3-core/=lib/v3-core/contracts/
 v3-periphery/=lib/v3-periphery/contracts/
+openzeppelin-contracts/=lib/openzeppelin-contracts/contracts/
+forge-std/=lib/forge-std/src/

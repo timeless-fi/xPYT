@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.4;
 
+import "forge-std/Test.sol";
+import {console2} from "forge-std/console2.sol";
+
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC4626} from "solmate/mixins/ERC4626.sol";
 
@@ -20,7 +23,6 @@ import {IUniswapV3MintCallback} from "v3-core/interfaces/callback/IUniswapV3Mint
 import {IQuoter} from "v3-periphery/interfaces/IQuoter.sol";
 
 import {xPYT} from "../xPYT.sol";
-import {BaseTest, console} from "./base/BaseTest.sol";
 import {TickMath} from "../uniswap-v3/lib/TickMath.sol";
 import {LiquidityAmounts} from "./lib/LiquidityAmounts.sol";
 import {UniswapDeployer} from "./utils/UniswapDeployer.sol";
@@ -28,7 +30,7 @@ import {UniswapV3xPYT} from "../uniswap-v3/UniswapV3xPYT.sol";
 import {PoolAddress} from "../uniswap-v3/lib/PoolAddress.sol";
 
 contract UniswapV3xPYTTest is
-    BaseTest,
+    Test,
     UniswapDeployer,
     IUniswapV3MintCallback
 {

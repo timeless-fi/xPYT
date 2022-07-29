@@ -3,16 +3,18 @@ pragma solidity ^0.8.4;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
 
+import {PerpetualYieldToken} from "timeless/PerpetualYieldToken.sol";
+
 import {IQuoter} from "v3-periphery/interfaces/IQuoter.sol";
 
-import {xPYT} from "./xPYT.sol";
-import {UniswapV3xPYT} from "./uniswap-v3/UniswapV3xPYT.sol";
+import {xPYT} from "../xPYT.sol";
+import {UniswapV3xPYT} from "./UniswapV3xPYT.sol";
 
-/// @title xPYTFactory
+/// @title UniswapV3xPYTFactory
 /// @author zefram.eth
 /// @notice Factory for deploying xPYT contracts
-contract xPYTFactory {
-    event DeployXPYT(ERC20 indexed asset_, xPYT deployed);
+contract UniswapV3xPYTFactory {
+    event DeployXPYT(PerpetualYieldToken indexed pyt, xPYT deployed);
 
     address public immutable uniswapV3Factory;
     IQuoter public immutable uniswapV3Quoter;
@@ -23,7 +25,7 @@ contract xPYTFactory {
     }
 
     function deployUniswapV3xPYT(
-        ERC20 asset_,
+        PerpetualYieldToken pyt,
         string memory name_,
         string memory symbol_,
         uint256 pounderRewardMultiplier_,
@@ -32,7 +34,7 @@ contract xPYTFactory {
         uint32 uniswapV3TwapSecondsAgo_
     ) external returns (xPYT deployed) {
         deployed = new UniswapV3xPYT(
-            asset_,
+            pyt,
             name_,
             symbol_,
             pounderRewardMultiplier_,
@@ -43,6 +45,6 @@ contract xPYTFactory {
             uniswapV3TwapSecondsAgo_
         );
 
-        emit DeployXPYT(asset_, deployed);
+        emit DeployXPYT(pyt, deployed);
     }
 }
