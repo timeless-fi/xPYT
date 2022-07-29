@@ -6,8 +6,8 @@ export ADDRESSES_FILE=./deployments/rinkeby.json
 export RPC_URL=$RPC_URL_RINKEBY
 
 # load common utilities
-. $(dirname $0)/common.sh
+. $(dirname $0)/../common.sh
 
 # deploy contracts
-factory_address=$(deploy xPYTFactory $UNIV3_FACTORY $UNIV3_QUOTER)
-echo "xPYTFactory=$factory_address"
+factory_address=$(deploy UniswapV3xPYTFactory $UNIV3_FACTORY $UNIV3_QUOTER)
+echo "UniswapV3xPYTFactory=$factory_address"
