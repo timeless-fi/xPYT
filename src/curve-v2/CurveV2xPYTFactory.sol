@@ -57,13 +57,6 @@ contract CurveV2xPYTFactory {
     ICurveFactory public immutable curveFactory;
 
     /// -----------------------------------------------------------------------
-    /// Storage variables
-    /// -----------------------------------------------------------------------
-
-    /// @notice The nonce of this account. Used for predicting deployment addresses.
-    uint256 public nonce;
-
-    /// -----------------------------------------------------------------------
     /// Constructor
     /// -----------------------------------------------------------------------
 
@@ -83,9 +76,6 @@ contract CurveV2xPYTFactory {
         uint256 minOutputMultiplier_,
         CurvePoolParams calldata curvePoolParams
     ) external returns (CurveV2xPYT deployed, ICurveCryptoSwap2ETH curvePool) {
-        // load nonce from storage to save gas
-        uint256 nonce_ = nonce;
-
         // deploy xPYT
         deployed = new CurveV2xPYT(
             pyt,
@@ -108,31 +98,8 @@ contract CurveV2xPYTFactory {
         // initialize xPYT
         deployed.initialize(curvePool);
 
-        // update nonce
-        unchecked {
-            nonce = nonce_ + 1;
-        }
-
         // emit deployment event
         emit DeployXPYT(pyt, deployed);
-    }
-
-    function predictDeployment(uint256 nonce_) public view returns (address) {
-        return
-            keccak256(
-                abi.encodePacked(
-                    // Prefix (0xc0 + 54):
-                    bytes1(0xF6),
-                    // Creator length (0x80 + 20):
-                    bytes1(0x94),
-                    // Creator:
-                    address(this),
-                    // Nonce length (0x80 + 32):
-                    bytes1(0xA0),
-                    // Nonce:
-                    nonce_
-                )
-            ).fromLast20Bytes(); // Convert the CREATE hash into an address.
     }
 
     function _deployCurvePool(
@@ -209,7 +176,8 @@ contract CurveV2xPYTFactory {
         (bool success, bytes memory result) = address(curveFactory).call(cd);
         require(success);
         return abi.decode(result, (ICurveCryptoSwap2ETH));
-        /*return
+        /*
+        return
             curveFactory.deploy_pool(
                 p.name,
                 p.symbol,
@@ -224,6 +192,7 @@ contract CurveV2xPYTFactory {
                 p.admin_fee,
                 p.ma_half_time,
                 p.initial_price
-            );*/
+            );
+        */
     }
 }

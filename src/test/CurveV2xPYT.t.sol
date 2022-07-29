@@ -210,12 +210,6 @@ contract CurveV2xPYTTest is Test, CurveDeployer {
         vm.expectRevert(
             abi.encodeWithSignature("Error_InvalidMultiplierValue()")
         );
-        xpyt = new CurveV2xPYT(
-            pyt,
-            "xPYT",
-            "xPYT",
-            10 * ONE,
-            10 * ONE
-        );
+        xpyt = new CurveV2xPYT(pyt, "xPYT", "xPYT", 10 * ONE, 10 * ONE);
     }
 }
