@@ -1,14 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.4;
 
-import {console2} from "forge-std/console2.sol";
-
 import {ERC20} from "solmate/tokens/ERC20.sol";
-import {Bytes32AddressLib} from "solmate/utils/Bytes32AddressLib.sol";
 
 import {PerpetualYieldToken} from "timeless/PerpetualYieldToken.sol";
-
-import {IQuoter} from "v3-periphery/interfaces/IQuoter.sol";
 
 import {xPYT} from "../xPYT.sol";
 import {CurveV2xPYT} from "./CurveV2xPYT.sol";
@@ -20,16 +15,17 @@ import {ICurveCryptoSwap2ETH} from "./external/ICurveCryptoSwap2ETH.sol";
 /// @notice Factory for deploying CurveV2xPYT contracts
 contract CurveV2xPYTFactory {
     /// -----------------------------------------------------------------------
-    /// Library usage
+    /// Errors
     /// -----------------------------------------------------------------------
 
-    using Bytes32AddressLib for bytes32;
+    error CurveV2xPYTFactory__StringTooLong();
+    error CurveV2xPYTFactory__PoolCreationFailed();
 
     /// -----------------------------------------------------------------------
     /// Events
     /// -----------------------------------------------------------------------
 
-    event DeployXPYT(ERC20 indexed asset_, xPYT deployed);
+    event DeployXPYT(PerpetualYieldToken indexed pyt, xPYT deployed);
 
     /// -----------------------------------------------------------------------
     /// Structs
@@ -54,6 +50,7 @@ contract CurveV2xPYTFactory {
     /// Immutable params
     /// -----------------------------------------------------------------------
 
+    /// @notice The official Curve factory contract for v2 crypto pools
     ICurveFactory public immutable curveFactory;
 
     /// -----------------------------------------------------------------------
@@ -68,6 +65,16 @@ contract CurveV2xPYTFactory {
     /// Public functions
     /// -----------------------------------------------------------------------
 
+    /// @notice Deploys a CurveV2xPYT contract and its corresponding Curve V2 pool.
+    /// @param pyt The PYT to deploy the xPYT for
+    /// @param name_ The name of the xPYT token
+    /// @param symbol_ The symbol of the xPYT token
+    /// @param pounderRewardMultiplier_ The proportion of the yield claimed in pound() to give to the caller as reward
+    /// @param minOutputMultiplier_ The minimum acceptable ratio between the NYT output in pound() and the expected NYT output
+    /// based on the TWAP
+    /// @param curvePoolParams The parameters of the Curve pool to deploy
+    /// @return deployed The deployed xPYT
+    /// @return curvePool The deployed Curve pool
     function deployCurveV2xPYT(
         PerpetualYieldToken pyt,
         string calldata name_,
@@ -102,14 +109,45 @@ contract CurveV2xPYTFactory {
         emit DeployXPYT(pyt, deployed);
     }
 
+    /// @dev Calls the Curve factory and deploys a new Curve v2 crypto pool
     function _deployCurvePool(
         address[2] memory coins,
         CurvePoolParams calldata p
     ) internal returns (ICurveCryptoSwap2ETH) {
-        bytes memory cd = new bytes(576);
+        // ensure the lengths of the name and symbol are within limits
+        if (_getStringLength(p.name) > 32 || _getStringLength(p.symbol) > 10) {
+            revert CurveV2xPYTFactory__StringTooLong();
+        }
+
+        // incrementally construct calldata to curveFactory.deploy_pool()
+        // in order to get around the stack-too-deep error
+        /**
+            Equivalent to:
+
+            return curveFactory.deploy_pool(
+                p.name,
+                p.symbol,
+                coins,
+                p.A,
+                p.gamma,
+                p.mid_fee,
+                p.out_fee,
+                p.allowed_extra_profit,
+                p.fee_gamma,
+                p.adjustment_step,
+                p.admin_fee,
+                p.ma_half_time,
+                p.initial_price
+            );
+         */
+
+        bytes memory cd = new bytes(576); // calldata to the curve factory
         address coin0 = coins[0];
         address coin1 = coins[1];
-        uint256 num;
+        uint256 num; // temporary variable for passing contents of p to Yul
+
+        // append the pointers to p.name and p.symbol
+        // append the coins array
         assembly {
             mstore(
                 add(cd, 0x20),
@@ -122,6 +160,8 @@ contract CurveV2xPYTFactory {
             mstore(add(cd, 0x60), coin0)
             mstore(add(cd, 0x80), coin1)
         }
+
+        // append the numerical parameters
         num = p.A;
         assembly {
             mstore(add(cd, 0xa0), num)
@@ -162,37 +202,43 @@ contract CurveV2xPYTFactory {
 
         assembly {
             mstore(add(cd, 0x1c0), num)
-            let pos := add(calldataload(p), p)
-            let tmp := calldataload(pos)
+
+            // append the contents of p.name and p.symbol
+            let pos := add(calldataload(p), p) // the position of p.name in calldata
+            let tmp := calldataload(pos) // load p.name.length
             mstore(add(cd, 0x1e0), tmp)
-            tmp := calldataload(add(pos, 0x20))
+            tmp := calldataload(add(pos, 0x20)) // load p.name
             mstore(add(cd, 0x200), tmp)
-            tmp := calldataload(add(pos, 0x40))
+            tmp := calldataload(add(pos, 0x40)) // load p.symbol
             mstore(add(cd, 0x220), tmp)
-            tmp := calldataload(add(pos, 0x60))
+            tmp := calldataload(add(pos, 0x60)) // load p.symbol.length
             mstore(add(cd, 0x240), tmp)
         }
+
+        // prepend the function selector
         cd = bytes.concat(ICurveFactory.deploy_pool.selector, cd);
+
+        // make the call to the curve factory
         (bool success, bytes memory result) = address(curveFactory).call(cd);
-        require(success);
+        if (!success) {
+            revert CurveV2xPYTFactory__PoolCreationFailed();
+        }
+
+        // return the deployed pool
         return abi.decode(result, (ICurveCryptoSwap2ETH));
-        /*
-        return
-            curveFactory.deploy_pool(
-                p.name,
-                p.symbol,
-                coins,
-                p.A,
-                p.gamma,
-                p.mid_fee,
-                p.out_fee,
-                p.allowed_extra_profit,
-                p.fee_gamma,
-                p.adjustment_step,
-                p.admin_fee,
-                p.ma_half_time,
-                p.initial_price
-            );
-        */
+    }
+
+    /// -----------------------------------------------------------------------
+    /// Internal utilities
+    /// -----------------------------------------------------------------------
+
+    function _getStringLength(string calldata str)
+        internal
+        pure
+        returns (uint256 len)
+    {
+        assembly {
+            len := str.length
+        }
     }
 }
