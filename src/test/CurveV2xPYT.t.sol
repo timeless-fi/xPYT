@@ -212,4 +212,37 @@ contract CurveV2xPYTTest is Test, CurveDeployer {
         );
         xpyt = new CurveV2xPYT(pyt, "xPYT", "xPYT", 10 * ONE, 10 * ONE);
     }
+
+    function testTriggerError_InsufficientOutput() public {
+        // mint yield to vault
+        uint256 mintYieldAmount = AMOUNT / 100;
+        underlying.mint(vault, mintYieldAmount);
+
+        // sell NYT to curve pool to attempt a sandwich attack
+        curvePool.exchange(0, 1, AMOUNT, 0, false, address(this));
+
+        // preview pound
+        (
+            xPYT.PreviewPoundErrorCode errorCode,
+            uint256 expectedClaimedYieldAmount,
+            uint256 expectedPYTCompounded,
+            uint256 expectedPounderReward
+        ) = xpyt.previewPound();
+        assertEq(
+            uint256(errorCode),
+            uint256(xPYT.PreviewPoundErrorCode.INSUFFICIENT_OUTPUT),
+            "previewPound() didn't throw error"
+        );
+        assertEq(
+            expectedClaimedYieldAmount,
+            0,
+            "expectedClaimedYieldAmount not 0"
+        );
+        assertEq(expectedPYTCompounded, 0, "expectedPYTCompounded not 0");
+        assertEq(expectedPounderReward, 0, "expectedPounderReward not 0");
+
+        // pound
+        vm.expectRevert(abi.encodeWithSignature("Error_InsufficientOutput()"));
+        xpyt.pound(POUNDER_REWARD_RECIPIENT);
+    }
 }
