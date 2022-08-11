@@ -103,7 +103,7 @@ contract UniswapV3xPYTTest is Test, UniswapDeployer, IUniswapV3MintCallback {
             MIN_OUTPUT_MULTIPLIER,
             UNI_FEE,
             TWAP_SECONDS_AGO,
-            TickMath.getSqrtRatioAtTick(0),
+            0,
             200
         );
 
