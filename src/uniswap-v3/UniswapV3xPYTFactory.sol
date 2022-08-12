@@ -23,7 +23,11 @@ contract UniswapV3xPYTFactory {
     /// Events
     /// -----------------------------------------------------------------------
 
-    event DeployXPYT(PerpetualYieldToken indexed pyt, xPYT deployed);
+    event DeployXPYT(
+        PerpetualYieldToken indexed pyt,
+        xPYT deployed,
+        IUniswapV3Pool pool
+    );
 
     /// -----------------------------------------------------------------------
     /// Immutable parameters
@@ -110,6 +114,6 @@ contract UniswapV3xPYTFactory {
             pool.increaseObservationCardinalityNext(observationCardinalityNext);
         }
 
-        emit DeployXPYT(pyt, deployed);
+        emit DeployXPYT(pyt, deployed, pool);
     }
 }
