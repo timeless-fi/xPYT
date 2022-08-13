@@ -28,12 +28,9 @@ import {LiquidityAmounts} from "./lib/LiquidityAmounts.sol";
 import {UniswapDeployer} from "./utils/UniswapDeployer.sol";
 import {UniswapV3xPYT} from "../uniswap-v3/UniswapV3xPYT.sol";
 import {PoolAddress} from "../uniswap-v3/lib/PoolAddress.sol";
+import {UniswapV3xPYTFactory} from "../uniswap-v3/UniswapV3xPYTFactory.sol";
 
-contract UniswapV3xPYTTest is
-    Test,
-    UniswapDeployer,
-    IUniswapV3MintCallback
-{
+contract UniswapV3xPYTTest is Test, UniswapDeployer, IUniswapV3MintCallback {
     error Error_NotUniswapV3Pool();
 
     uint24 constant UNI_FEE = 500;
@@ -59,6 +56,7 @@ contract UniswapV3xPYTTest is
     IUniswapV3Factory uniswapV3Factory;
     IQuoter uniswapV3Quoter;
     IUniswapV3Pool uniswapV3Pool;
+    UniswapV3xPYTFactory xpytFactory;
 
     function setUp() public {
         // deploy factory
@@ -89,24 +87,25 @@ contract UniswapV3xPYTTest is
             deployUniswapV3Quoter(address(uniswapV3Factory), address(0))
         );
 
-        // deploy xPYT
-        xpyt = new UniswapV3xPYT(
-            ERC20(address(pyt)),
+        // deploy xPYT factory
+        xpytFactory = new UniswapV3xPYTFactory(
+            uniswapV3Factory,
+            uniswapV3Quoter
+        );
+
+        // deploy xPYT and uniswap v3 pool
+        (xpyt, uniswapV3Pool) = xpytFactory.deployUniswapV3xPYT(
+            pyt,
+            nyt,
             "xPYT",
             "xPYT",
             POUNDER_REWARD_MULTIPLIER,
             MIN_OUTPUT_MULTIPLIER,
-            address(uniswapV3Factory),
-            uniswapV3Quoter,
             UNI_FEE,
-            TWAP_SECONDS_AGO
+            TWAP_SECONDS_AGO,
+            0,
+            200
         );
-
-        // deploy uniswap v3 pair
-        uniswapV3Pool = IUniswapV3Pool(
-            uniswapV3Factory.createPool(address(nyt), address(xpyt), UNI_FEE)
-        );
-        uniswapV3Pool.initialize(TickMath.getSqrtRatioAtTick(0));
 
         // mint underlying
         underlying.mint(address(this), 3 * AMOUNT);

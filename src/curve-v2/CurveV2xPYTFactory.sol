@@ -25,7 +25,11 @@ contract CurveV2xPYTFactory {
     /// Events
     /// -----------------------------------------------------------------------
 
-    event DeployXPYT(PerpetualYieldToken indexed pyt, xPYT deployed);
+    event DeployXPYT(
+        PerpetualYieldToken indexed pyt,
+        xPYT deployed,
+        ICurveCryptoSwap2ETH pool
+    );
 
     /// -----------------------------------------------------------------------
     /// Structs
@@ -106,7 +110,7 @@ contract CurveV2xPYTFactory {
         deployed.initialize(curvePool);
 
         // emit deployment event
-        emit DeployXPYT(pyt, deployed);
+        emit DeployXPYT(pyt, deployed, curvePool);
     }
 
     /// @dev Calls the Curve factory and deploys a new Curve v2 crypto pool
