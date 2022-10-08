@@ -58,6 +58,13 @@ contract CurveV2xPYTFactory {
     ICurveFactory public immutable curveFactory;
 
     /// -----------------------------------------------------------------------
+    /// State variables
+    /// -----------------------------------------------------------------------
+
+    /// @notice Records xPYT contracts deployed by the factory
+    mapping(address => bool) public isXPYT;
+
+    /// -----------------------------------------------------------------------
     /// Constructor
     /// -----------------------------------------------------------------------
 
@@ -108,6 +115,9 @@ contract CurveV2xPYTFactory {
 
         // initialize xPYT
         deployed.initialize(curvePool);
+
+        // record xPYT in factory
+        isXPYT[address(deployed)] = true;
 
         // emit deployment event
         emit DeployXPYT(pyt, deployed, curvePool);
