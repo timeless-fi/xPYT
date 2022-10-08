@@ -90,7 +90,7 @@ contract CurveV2xPYT is xPYT {
         returns (uint256 xPytAmountOut)
     {
         ICurveCryptoSwap2ETH curvePool_ = curvePool;
-        nyt.approve(address(curvePool_), nytAmountIn);
+        nyt.approve(address(curvePool_), nytAmountIn + 1);
         return curvePool_.exchange(0, 1, nytAmountIn, 0, false, address(this));
     }
 
