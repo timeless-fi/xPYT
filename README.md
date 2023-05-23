@@ -60,3 +60,9 @@ make build
 ```
 make test
 ```
+
+## Known issues
+
+### `pound()` can be sandwich attacked
+
+Since calling `pound()` is (intentionally) permissionless, an attacker can sandwich attack the swap that occurs during the call to extract profit. Realistically it's not a problem since the amount of yield being compounded is usually small (on the same order of magnitude as the gas cost).
